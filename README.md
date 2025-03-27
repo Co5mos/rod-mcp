@@ -102,6 +102,29 @@ rod-mcp/
 
 Welcome to submit Pull Request or create Issue!
 
+## Tool List
+
+Rod-MCP provides the following tools:
+
+| Tool Name | Description | Parameters |
+|-----------|-------------|------------|
+| rod_navigate | Navigate to a URL | url: URL to navigate to |
+| rod_go_back | Go back to the previous page | None |
+| rod_go_forward | Go forward to the next page | None |
+| rod_reload | Reload the current page | None |
+| rod_press_key | Press a key on the keyboard | key: Name of the key to press (like "a" or "ArrowLeft") |
+| rod_click | Click an element on the page | selector: CSS selector |
+| rod_fill | Fill out an input field | selector: CSS selector, value: Text to fill |
+| rod_selector | Select an option in a dropdown | selector: CSS selector, value: Value to select |
+| rod_hover | Hover over an element | selector: CSS selector |
+| rod_drag | Perform drag and drop operation | source_selector: Source element CSS selector, target_selector: Target element CSS selector |
+| rod_screenshot | Take a screenshot | name: Screenshot name, selector: (optional) Element CSS selector, width: (optional) Width, height: (optional) Height |
+| rod_pdf | Save page as PDF | file_path: File save path, file_name: File name |
+| rod_wait | Wait for a specified time | time: Wait time in seconds (max 10s) |
+| rod_snapshot | Capture accessibility snapshot | None |
+| rod_close | Close the browser | None |
+| rod_evaluate | Execute JavaScript code | script: JavaScript code to execute |
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file

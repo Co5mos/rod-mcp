@@ -98,6 +98,29 @@ rod-mcp/
 
 欢迎提交 Pull Request 或创建 Issue！
 
+## 工具列表
+
+Rod-MCP提供以下工具：
+
+| 工具名 | 描述 | 参数 |
+|--------|------|------|
+| rod_navigate | 导航到指定URL | url: 要导航到的URL |
+| rod_go_back | 返回上一页 | 无 |
+| rod_go_forward | 前进到下一页 | 无 |
+| rod_reload | 重新加载当前页面 | 无 |
+| rod_press_key | 按下键盘按键 | key: 要按下的键(如"a"或"ArrowLeft") |
+| rod_click | 点击页面元素 | selector: CSS选择器 |
+| rod_fill | 在输入框中填写文本 | selector: CSS选择器, value: 要填写的文本 |
+| rod_selector | 在下拉框中选择选项 | selector: CSS选择器, value: 要选择的值 |
+| rod_hover | 将鼠标悬停在元素上 | selector: CSS选择器 |
+| rod_drag | 执行拖放操作 | source_selector: 源元素CSS选择器, target_selector: 目标元素CSS选择器 |
+| rod_screenshot | 截取页面或元素截图 | name: 截图名称, selector: (可选)元素CSS选择器, width: (可选)宽度, height: (可选)高度 |
+| rod_pdf | 将页面保存为PDF | file_path: 文件保存路径, file_name: 文件名 |
+| rod_wait | 等待指定时间 | time: 等待秒数(最大10秒) |
+| rod_snapshot | 获取页面可访问性树快照 | 无 |
+| rod_close | 关闭浏览器 | 无 |
+| rod_evaluate | 在页面上执行JavaScript | script: 要执行的JavaScript代码 |
+
 ## 许可证
 
 本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
