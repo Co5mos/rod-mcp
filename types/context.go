@@ -172,6 +172,10 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 	return page, nil
 }
 
+// GetBrowser 获取Browser实例
+func (ctx *Context) GetBrowser() *rod.Browser {
+	return ctx.browser
+
 // Close the browser
 // PS: This method only used because of server exit
 func (ctx *Context) Close() error {
