@@ -81,6 +81,18 @@ var (
 	Snapshot = mcp.NewTool("rod_snapshot",
 		mcp.WithDescription("Capture accessibility snapshot of the current page"),
 	)
+	SelectElement = mcp.NewTool("rod_select_element",
+		mcp.WithDescription("Select and retrieve information about elements on the page"),
+		mcp.WithString("selector", mcp.Description("CSS selector of the elements to retrieve"), mcp.Required()),
+		mcp.WithBoolean("get_attributes", mcp.Description("Whether to include element attributes in the result (default: false)")),
+		mcp.WithBoolean("get_text", mcp.Description("Whether to include element text content in the result (default: true)")),
+	)
+	GetText = mcp.NewTool("rod_get_text",
+		mcp.WithDescription("Get text content from the page or a specific element"),
+		mcp.WithString("selector", mcp.Description("CSS selector of the element to get text from (if empty, gets text from entire page)")),
+		mcp.WithBoolean("trim", mcp.Description("Whether to trim whitespace from the text (default: true)")),
+		mcp.WithBoolean("include_hidden", mcp.Description("Whether to include hidden text (default: false)")),
+	)
 )
 
 type ToolHandler = func(rodCtx *types.Context) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error)
@@ -509,6 +521,167 @@ var (
 			return mcp.NewToolResultText(fmt.Sprintf("Script evaluated successfully, result: %v", result.Value)), nil
 		}
 	}
+
+	SelectElementHandler = func(rodCtx *types.Context) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			page, err := rodCtx.EnsurePage()
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Failed to access page: %s", err.Error()))
+			}
+
+			selector := request.Params.Arguments["selector"].(string)
+
+			getAttributes := false
+			if attr, ok := request.Params.Arguments["get_attributes"].(bool); ok {
+				getAttributes = attr
+			}
+
+			getText := true
+			if txt, ok := request.Params.Arguments["get_text"].(bool); ok {
+				getText = txt
+			}
+
+			// 使用JavaScript查询元素并获取信息
+			script := fmt.Sprintf(`() => {
+				const elements = Array.from(document.querySelectorAll("%s"));
+				return elements.map(el => {
+					const result = {
+						tagName: el.tagName.toLowerCase(),
+						id: el.id || "",
+						className: el.className || ""
+					};
+					
+					if (%t) {
+						result.text = el.textContent || "";
+					}
+					
+					if (%t) {
+						result.attributes = {};
+						Array.from(el.attributes).forEach(attr => {
+							result.attributes[attr.name] = attr.value;
+						});
+					}
+					
+					if (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT") {
+						result.value = el.value || "";
+					}
+					
+					// 计算元素的位置和大小
+					const rect = el.getBoundingClientRect();
+					result.rect = {
+						x: rect.x,
+						y: rect.y,
+						width: rect.width,
+						height: rect.height
+					};
+					
+					return result;
+				});
+			}`, selector, getText, getAttributes)
+
+			result, err := page.Eval(script)
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Failed to select elements with selector %s: %s", selector, err.Error()))
+			}
+
+			// 构建结果文本
+			resultText := fmt.Sprintf("Found elements matching selector '%s':\n", selector)
+			resultText += fmt.Sprintf("%v", result.Value)
+
+			return mcp.NewToolResultText(resultText), nil
+		}
+	}
+
+	GetTextHandler = func(rodCtx *types.Context) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			page, err := rodCtx.EnsurePage()
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Failed to access page: %s", err.Error()))
+			}
+
+			// 获取参数
+			selector := ""
+			if sel, ok := request.Params.Arguments["selector"].(string); ok {
+				selector = sel
+			}
+
+			trim := true
+			if t, ok := request.Params.Arguments["trim"].(bool); ok {
+				trim = t
+			}
+
+			includeHidden := false
+			if ih, ok := request.Params.Arguments["include_hidden"].(bool); ok {
+				includeHidden = ih
+			}
+
+			// 构建JavaScript脚本
+			var script string
+			if selector == "" {
+				// 获取整个页面的文本
+				script = fmt.Sprintf(`() => {
+					const getVisibleText = (node) => {
+						if (node.nodeType === Node.TEXT_NODE) {
+							const text = node.textContent;
+							const parentStyle = window.getComputedStyle(node.parentElement);
+							if (%t || (parentStyle.display !== 'none' && parentStyle.visibility !== 'hidden')) {
+								return %t ? text.trim() : text;
+							}
+							return '';
+						}
+						
+						if (node.nodeType !== Node.ELEMENT_NODE) {
+							return '';
+						}
+						
+						const style = window.getComputedStyle(node);
+						if (!%t && (style.display === 'none' || style.visibility === 'hidden')) {
+							return '';
+						}
+						
+						let text = '';
+						for (const child of node.childNodes) {
+							text += getVisibleText(child);
+						}
+						return %t ? text.trim() : text;
+					};
+					
+					return getVisibleText(document.body);
+				}`, includeHidden, trim, includeHidden, trim)
+			} else {
+				// 获取特定元素的文本
+				script = fmt.Sprintf(`() => {
+					const elements = document.querySelectorAll("%s");
+					if (elements.length === 0) {
+						return "No elements found matching selector: %s";
+					}
+					
+					return Array.from(elements).map(el => {
+						if (!%t && (window.getComputedStyle(el).display === 'none' || 
+							window.getComputedStyle(el).visibility === 'hidden')) {
+							return "[Hidden element]";
+						}
+						
+						const text = el.textContent || "";
+						return %t ? text.trim() : text;
+					}).join("\n\n");
+				}`, selector, selector, includeHidden, trim)
+			}
+
+			// 执行脚本
+			result, err := page.Eval(script)
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Failed to get text: %s", err.Error()))
+			}
+
+			textContent := fmt.Sprintf("%v", result.Value)
+			if selector == "" {
+				return mcp.NewToolResultText(fmt.Sprintf("Text content of the page:\n%s", textContent)), nil
+			} else {
+				return mcp.NewToolResultText(fmt.Sprintf("Text content of elements matching '%s':\n%s", selector, textContent)), nil
+			}
+		}
+	}
 )
 
 var (
@@ -528,22 +701,26 @@ var (
 		Snapshot,
 		CloseBrowser,
 		Evaluate,
+		SelectElement,
+		GetText,
 	}
 	CommonToolHandlers = map[string]ToolHandler{
-		"rod_navigate":   NavigationHandler,
-		"rod_go_back":    GoBackHandler,
-		"rod_go_forward": GoForwardHandler,
-		"rod_reload":     ReLoadHandler,
-		"rod_press_key":  PressKeyHandler,
-		"rod_click":      ClickHandler,
-		"rod_fill":       FillHandler,
-		"rod_selector":   SelectorHandler,
-		"rod_drag":       DragHandler,
-		"rod_screenshot": ScreenshotHandler,
-		"rod_pdf":        PdfHandler,
-		"rod_wait":       WaitHandler,
-		"rod_snapshot":   SnapshotHandler,
-		"rod_close":      CloseBrowserHandler,
-		"rod_evaluate":   EvaluateHandler,
+		"rod_navigate":       NavigationHandler,
+		"rod_go_back":        GoBackHandler,
+		"rod_go_forward":     GoForwardHandler,
+		"rod_reload":         ReLoadHandler,
+		"rod_press_key":      PressKeyHandler,
+		"rod_click":          ClickHandler,
+		"rod_fill":           FillHandler,
+		"rod_selector":       SelectorHandler,
+		"rod_drag":           DragHandler,
+		"rod_screenshot":     ScreenshotHandler,
+		"rod_pdf":            PdfHandler,
+		"rod_wait":           WaitHandler,
+		"rod_snapshot":       SnapshotHandler,
+		"rod_close":          CloseBrowserHandler,
+		"rod_evaluate":       EvaluateHandler,
+		"rod_select_element": SelectElementHandler,
+		"rod_get_text":       GetTextHandler,
 	}
 )
