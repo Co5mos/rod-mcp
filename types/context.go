@@ -3,13 +3,14 @@ package types
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
+
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod-mcp/utils"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/pkg/errors"
-	"strings"
-	"sync"
 )
 
 func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
@@ -113,4 +114,9 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 		return nil, errors.Wrap(err, "create page failed")
 	}
 	return page, nil
+}
+
+// GetBrowser 获取Browser实例
+func (ctx *Context) GetBrowser() *rod.Browser {
+	return ctx.browser
 }
