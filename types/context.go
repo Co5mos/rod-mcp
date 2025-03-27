@@ -3,14 +3,15 @@ package types
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
+	"sync/atomic"
+
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod-mcp/utils"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/pkg/errors"
-	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
@@ -175,6 +176,7 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 // GetBrowser 获取Browser实例
 func (ctx *Context) GetBrowser() *rod.Browser {
 	return ctx.browser
+}
 
 // Close the browser
 // PS: This method only used because of server exit

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
-  
+
 	"github.com/charmbracelet/log"
 	"github.com/go-rod/rod-mcp/types"
 	"github.com/go-rod/rod-mcp/utils"
@@ -209,10 +209,9 @@ var (
 					err = page.InsertText(keyStr)
 				}
 			}
-
 			if err != nil {
-				log.Errorf("Failed to press key %s: %s", string(key), err.Error())
-				return nil, errors.New(fmt.Sprintf("Failed to press key %s: %s", string(key), err.Error()))
+				log.Errorf("Failed to press key %s: %s", keyStr, err.Error())
+				return nil, errors.New(fmt.Sprintf("Failed to press key %s: %s", keyStr, err.Error()))
 			}
 			return mcp.NewToolResultText(fmt.Sprintf("Press key %s successfully", keyStr)), nil
 		}
@@ -681,6 +680,9 @@ var (
 			} else {
 				return mcp.NewToolResultText(fmt.Sprintf("Text content of elements matching '%s':\n%s", selector, textContent)), nil
 			}
+		}
+	}
+
 	CloseBrowserHandler = func(rodCtx *types.Context) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			err := rodCtx.CloseBrowser()
@@ -711,7 +713,7 @@ var (
 		Evaluate,
 		SelectElement,
 		GetText,
-    CloseBrowser,
+		CloseBrowser,
 	}
 	CommonToolHandlers = map[string]ToolHandler{
 		"rod_navigate":       NavigationHandler,
@@ -730,6 +732,6 @@ var (
 		"rod_evaluate":       EvaluateHandler,
 		"rod_select_element": SelectElementHandler,
 		"rod_get_text":       GetTextHandler,
-		"rod_close_browser": CloseBrowserHandler,
+		"rod_close_browser":  CloseBrowserHandler,
 	}
 )
